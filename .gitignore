@@ -3,15 +3,40 @@
 .env.local
 .env.*.local
 
-# Dependencies
-node_modules/
-vendor/
-
-# Build outputs
-dist/
-build/
-*.pyc
+# Python
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+venv/
+ENV/
+env/
+
+# Node / Next.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+.next/
+out/
+.vercel
 
 # IDE files
 .vscode/
@@ -27,6 +52,19 @@ Thumbs.db
 # Logs
 *.log
 logs/
+
+# Docker
+docker-compose.override.yml
+
+# Database
+*.db
+*.sqlite
+postgres_data/
+
+# Test coverage
+.coverage
+htmlcov/
+.pytest_cache/
 
 # Keep Claude Code configuration
 !.claude/

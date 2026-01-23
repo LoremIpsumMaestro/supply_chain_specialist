@@ -1,0 +1,49 @@
+# Backend dependencies for Supply Chain AI Assistant
+
+# Web Framework
+fastapi==0.109.0
+uvicorn[standard]==0.27.0
+python-multipart==0.0.6
+slowapi==0.1.9
+
+# Database
+sqlalchemy==2.0.25
+psycopg[binary]>=3.2.0
+alembic==1.13.1
+
+# Authentication
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# LLM & AI (Ollama)
+ollama==0.1.6
+langchain>=0.1.0
+langchain-community>=0.0.16
+tiktoken>=0.6.0
+
+# Vector Database
+typesense==0.17.0
+
+# Document Processing
+pandas==2.2.0
+openpyxl==3.1.2
+PyPDF2==3.0.1
+python-docx==1.1.0
+python-pptx==0.6.23
+
+# Utilities
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+python-dotenv==1.0.0
+
+# Task Queue
+celery[redis]==5.3.6
+redis==5.0.1
+
+# Object Storage (MinIO)
+minio==7.2.3
+
+# Testing
+pytest==7.4.4
+pytest-asyncio==0.23.3
+httpx==0.25.2
