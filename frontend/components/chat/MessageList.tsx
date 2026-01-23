@@ -1,7 +1,6 @@
 'use client'
 
 import { useEffect, useRef } from 'react'
-import { ScrollArea } from '@/components/ui/scroll-area'
 import { useMessageStore } from '@/store/messageStore'
 import { useUIStore } from '@/store/uiStore'
 import Message from './Message'
@@ -16,17 +15,23 @@ export default function MessageList({ conversationId }: MessageListProps) {
   const { isAutoScrollEnabled, setAutoScrollEnabled, setNewMessageIndicator } =
     useUIStore()
 
-  const scrollAreaRef = useRef<HTMLDivElement>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const viewportRef = useRef<HTMLDivElement>(null)
 
   const messages = messagesByConversation[conversationId] || []
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
-    if (isAutoScrollEnabled && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+    if (isAutoScrollEnabled && viewportRef.current) {
+      // Use scrollTo instead of scrollIntoView for smoother streaming
+      // Use 'auto' behavior during streaming to avoid animation conflicts
+      const behavior = isStreaming ? 'auto' : 'smooth'
+      viewportRef.current.scrollTo({
+        top: viewportRef.current.scrollHeight,
+        behavior: behavior as ScrollBehavior
+      })
     }
-  }, [messages, streamingContent, isAutoScrollEnabled])
+  }, [messages, streamingContent, isAutoScrollEnabled, isStreaming])
 
   // Detect manual scroll up
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
@@ -46,7 +51,12 @@ export default function MessageList({ conversationId }: MessageListProps) {
   const scrollToBottom = () => {
     setAutoScrollEnabled(true)
     setNewMessageIndicator(false)
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+    if (viewportRef.current) {
+      viewportRef.current.scrollTo({
+        top: viewportRef.current.scrollHeight,
+        behavior: 'smooth'
+      })
+    }
   }
 
   if (messages.length === 0 && !isStreaming) {
@@ -65,10 +75,10 @@ export default function MessageList({ conversationId }: MessageListProps) {
   }
 
   return (
-    <div className="relative h-full">
-      <ScrollArea
-        ref={scrollAreaRef}
-        className="h-full px-4 py-6"
+    <div className="relative flex h-full flex-col">
+      <div
+        ref={viewportRef}
+        className="flex-1 overflow-y-auto px-4 py-6"
         onScroll={handleScroll}
       >
         <div className="mx-auto max-w-3xl space-y-6">
@@ -89,7 +99,7 @@ export default function MessageList({ conversationId }: MessageListProps) {
 
           <div ref={messagesEndRef} />
         </div>
-      </ScrollArea>
+      </div>
 
       {/* New message indicator */}
       {!isAutoScrollEnabled && (

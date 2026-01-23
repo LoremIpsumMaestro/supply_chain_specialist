@@ -133,8 +133,15 @@ export default function ChatPage() {
           </div>
         )}
 
-        <MessageList conversationId={activeConversationId} />
-        <MessageInput conversationId={activeConversationId} />
+        {/* Messages area - scrollable */}
+        <div className="flex-1 overflow-hidden">
+          <MessageList conversationId={activeConversationId} />
+        </div>
+
+        {/* Input area - fixed at bottom */}
+        <div className="flex-shrink-0">
+          <MessageInput conversationId={activeConversationId} />
+        </div>
       </div>
     </ChatLayout>
   )
