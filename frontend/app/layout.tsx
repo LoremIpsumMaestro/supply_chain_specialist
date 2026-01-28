@@ -7,6 +7,9 @@ const inter = Inter({ subsets: ['latin'] })
 export const metadata: Metadata = {
   title: 'Supply Chain AI Assistant',
   description: 'Assistant IA spécialisé pour professionnels Supply Chain',
+  icons: {
+    icon: '/icon.svg',
+  },
 }
 
 export default function RootLayout({

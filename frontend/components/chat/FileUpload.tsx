@@ -101,7 +101,7 @@ export function FileUpload({
   const currentProgress = Object.values(uploadProgress)[0] || 0
 
   return (
-    <div className="w-full">
+    <div className="w-full" data-testid="file-upload-container">
       <div
         {...getRootProps()}
         className={`
@@ -109,8 +109,9 @@ export function FileUpload({
           ${isDragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 hover:border-gray-400'}
           ${isUploading ? 'opacity-50 cursor-not-allowed' : ''}
         `}
+        data-testid="file-dropzone"
       >
-        <input {...getInputProps()} />
+        <input {...getInputProps()} data-testid="file-input" />
 
         <div className="flex flex-col items-center gap-2">
           {isUploading ? (

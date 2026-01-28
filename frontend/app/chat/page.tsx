@@ -89,6 +89,7 @@ export default function ChatPage() {
               variant="outline"
               size="sm"
               onClick={() => setShowUpload(!showUpload)}
+              data-testid="toggle-upload-button"
             >
               {showUpload ? (
                 <>
