@@ -1,5 +1,9 @@
 """LLM service for generating responses with Ollama and RAG."""
 
+print("=" * 80)
+print("🔥 LLM_SERVICE.PY IS BEING LOADED NOW!")
+print("=" * 80)
+
 import asyncio
 import json
 import logging
@@ -12,6 +16,7 @@ from sqlalchemy.orm import Session
 from backend.models.message import MessageDB, MessageStreamChunk, CitationMetadata
 from backend.models.file import FileDB
 from backend.services.rag_service import rag_service
+from backend.services.knowledge_service import knowledge_service
 from backend.config import settings
 
 
@@ -61,24 +66,52 @@ class LLMService:
                 FileDB.user_id == user_id,
             ).all()
 
-            # Perform RAG search if files exist
+            # Perform searches: knowledge base + user documents
             rag_context = ""
             search_results = []
+            knowledge_results = []
 
+            # 1. Always search knowledge base
+            logger.info(f"Searching knowledge base for query: {user_query[:50]}...")
+            knowledge_results = knowledge_service.search_knowledge(
+                query=user_query,
+                top_k=3,  # Top 3 from knowledge base
+            )
+
+            if knowledge_results:
+                logger.info(f"Knowledge base search returned {len(knowledge_results)} results")
+
+            # 2. Search user documents if files exist
             if files:
-                logger.info(f"Performing RAG search for query: {user_query[:50]}...")
+                logger.info(f"Performing RAG search in user documents for query: {user_query[:50]}...")
                 search_results = rag_service.hybrid_search(
                     query=user_query,
                     user_id=str(user_id),
-                    top_k=5,
+                    top_k=5,  # Top 5 from user documents
                 )
 
                 if search_results:
-                    rag_context = rag_service.build_rag_context(search_results)
-                    logger.info(f"RAG search returned {len(search_results)} results")
-                else:
-                    logger.info("No relevant results from RAG search")
-                    rag_context = "Aucune information pertinente n'a été trouvée dans vos documents sur ce sujet."
+                    logger.info(f"User documents search returned {len(search_results)} results")
+
+            # 3. Build combined context
+            if knowledge_results or search_results:
+                context_parts = []
+
+                # Add knowledge base context first
+                if knowledge_results:
+                    kb_context = knowledge_service.build_knowledge_context(knowledge_results)
+                    context_parts.append(kb_context)
+
+                # Add user documents context
+                if search_results:
+                    docs_context = rag_service.build_rag_context(search_results)
+                    context_parts.append(docs_context)
+
+                rag_context = "\n\n".join(context_parts)
+            else:
+                logger.info("No relevant results from knowledge base or user documents")
+                if files:
+                    rag_context = "Aucune information pertinente n'a été trouvée dans vos documents ou dans la base de connaissances sur ce sujet."
 
             # Build messages for LLM
             messages = self._build_messages(conversation_history, rag_context)
@@ -87,13 +120,23 @@ class LLMService:
             async for chunk in self._stream_ollama_response(messages):
                 yield chunk
 
-            # Send final chunk with citations if RAG was used
-            citations = self._extract_citations(search_results) if search_results else None
+            # Send final chunk with citations from both sources
+            all_citations = []
+
+            # Add citations from knowledge base
+            if knowledge_results:
+                kb_citations = self._extract_knowledge_citations(knowledge_results)
+                all_citations.extend(kb_citations)
+
+            # Add citations from user documents
+            if search_results:
+                doc_citations = self._extract_citations(search_results)
+                all_citations.extend(doc_citations)
 
             yield MessageStreamChunk(
                 content="",
                 is_final=True,
-                citations=citations,
+                citations=all_citations if all_citations else None,
             )
 
         except Exception as e:
@@ -115,21 +158,29 @@ class LLMService:
             MessageStreamChunk objects with streaming content
         """
         try:
+            # Log request details for debugging
+            url = f"{self.ollama_base_url}/api/chat"
+            payload = {
+                "model": self.model,
+                "messages": messages,
+                "stream": True,
+                "options": {
+                    "temperature": self.temperature,
+                }
+            }
+            print(f"🔍 DEBUG: Calling Ollama: {url}")
+            print(f"🔍 DEBUG: Model: {self.model}")
+            print(f"🔍 DEBUG: Payload keys: {payload.keys()}")
+
             # Call Ollama chat API with streaming
             response = requests.post(
-                f"{self.ollama_base_url}/api/chat",
-                json={
-                    "model": self.model,
-                    "messages": messages,
-                    "stream": True,
-                    "options": {
-                        "temperature": self.temperature,
-                    }
-                },
+                url,
+                json=payload,
                 stream=True,
                 timeout=60,
             )
 
+            print(f"🔍 DEBUG: Ollama response status: {response.status_code}")
             response.raise_for_status()
 
             # Stream response chunks
@@ -211,7 +262,7 @@ class LLMService:
 
         return messages
 
-    def _extract_citations(self, search_results: List[dict]) -> Optional[List[CitationMetadata]]:
+    def _extract_citations(self, search_results: List[dict]) -> List[CitationMetadata]:
         """
         Extract citation metadata from search results.
 
@@ -222,7 +273,7 @@ class LLMService:
             List of CitationMetadata objects
         """
         if not search_results:
-            return None
+            return []
 
         citations = []
 
@@ -237,6 +288,38 @@ class LLMService:
                 cell_ref=metadata.get('cell_ref'),
                 slide_number=metadata.get('slide_number'),
                 row_number=metadata.get('row_number'),
+                excerpt=result['content'][:200],  # First 200 chars
+            )
+
+            citations.append(citation)
+
+        return citations
+
+    def _extract_knowledge_citations(self, knowledge_results: List[dict]) -> List[CitationMetadata]:
+        """
+        Extract citation metadata from knowledge base search results.
+
+        Args:
+            knowledge_results: Results from knowledge base search
+
+        Returns:
+            List of CitationMetadata objects
+        """
+        if not knowledge_results:
+            return []
+
+        citations = []
+
+        for result in knowledge_results:
+            # Knowledge base citations use "knowledge" as source type
+            citation = CitationMetadata(
+                source_type='knowledge',
+                filename=f"{result.get('category', 'General')} - {result.get('title', 'Untitled')}",
+                page=None,
+                sheet_name=None,
+                cell_ref=None,
+                slide_number=None,
+                row_number=None,
                 excerpt=result['content'][:200],  # First 200 chars
             )
 

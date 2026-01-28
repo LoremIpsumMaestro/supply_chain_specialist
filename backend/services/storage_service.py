@@ -8,7 +8,7 @@ from uuid import UUID
 from minio import Minio
 from minio.error import S3Error
 from minio.commonconfig import ENABLED
-from minio.lifecycleconfig import LifecycleConfig, Rule, Expiration
+from minio.lifecycleconfig import LifecycleConfig, Rule, Expiration, Filter
 
 from backend.config import settings
 
@@ -51,9 +51,11 @@ class StorageService:
         """Configure lifecycle policy for 24h TTL."""
         try:
             # Rule to expire objects after 1 day (24 hours)
+            # Filter with empty prefix applies to all objects
             rule = Rule(
                 rule_id="expire-after-24h",
                 status=ENABLED,
+                rule_filter=Filter(prefix=""),
                 expiration=Expiration(days=1),
             )
             config = LifecycleConfig([rule])

@@ -235,22 +235,26 @@ class RAGService:
                 logger.error("Failed to generate query embedding")
                 return []
 
-            # Build search parameters
-            search_params = {
-                'q': query,
-                'query_by': 'content',
-                'vector_query': f'embedding:([{",".join(map(str, query_embedding))}], k:{top_k * 2})',
-                'filter_by': f'user_id:={user_id}',
-                'per_page': top_k,
-                'sort_by': '_text_match:desc,_vector_distance:asc',  # Hybrid: 30% keyword, 70% vector
+            # Build search using multi_search for large embeddings
+            filter_by = f'user_id:={user_id}'
+            if file_id:
+                filter_by += f' && file_id:={file_id}'
+
+            search_request = {
+                'searches': [{
+                    'collection': self.collection_name,
+                    'q': query,
+                    'query_by': 'content',
+                    'vector_query': f'embedding:([{",".join(map(str, query_embedding))}], k:{top_k * 2})',
+                    'filter_by': filter_by,
+                    'per_page': top_k,
+                    'sort_by': '_text_match:desc,_vector_distance:asc',
+                }]
             }
 
-            # Add file filter if specified
-            if file_id:
-                search_params['filter_by'] += f' && file_id:={file_id}'
-
-            # Execute search
-            results = self.typesense_client.collections[self.collection_name].documents.search(search_params)
+            # Execute multi_search
+            multi_results = self.typesense_client.multi_search.perform(search_request, {})
+            results = multi_results['results'][0] if multi_results.get('results') else {'hits': []}
 
             # Format results
             formatted_results = []
