@@ -1,18 +1,77 @@
 """Celery tasks for asynchronous document processing."""
 
 import logging
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy.orm import Session
 
 from backend.tasks import celery_app
 from backend.db.base import SessionLocal
-from backend.models.file import FileDB, ProcessingStatus
+from backend.models.file import FileDB, ProcessingStatus, FileType
 from backend.services.storage_service import storage_service
 from backend.services.document_parser import DocumentParserFactory
 
 
 logger = logging.getLogger(__name__)
+
+
+def _extract_temporal_metadata(chunks) -> dict:
+    """
+    Extract temporal metadata from parsed chunks.
+
+    Args:
+        chunks: List of DocumentChunk objects
+
+    Returns:
+        Dictionary with temporal metadata
+    """
+    from backend.services.temporal_service import temporal_service
+
+    try:
+        # Collect all detected temporal columns from chunks
+        detected_columns = set()
+        all_dates = []
+
+        for chunk in chunks:
+            if 'temporal_context' in chunk.metadata:
+                tc = chunk.metadata['temporal_context']
+                for key, value in tc.items():
+                    if value:
+                        detected_columns.add(key)
+                        # Try to parse date for time range
+                        try:
+                            import pandas as pd
+                            dt = pd.to_datetime(value)
+                            all_dates.append(dt)
+                        except Exception:
+                            pass
+
+        # Build temporal metadata
+        metadata = {
+            'upload_date': datetime.utcnow().isoformat(),
+            'detected_date_columns': list(detected_columns),
+            'user_configured_columns': None,
+        }
+
+        # Calculate time range if dates found
+        if all_dates:
+            earliest = min(all_dates)
+            latest = max(all_dates)
+            metadata['time_range'] = {
+                'earliest': earliest.strftime('%Y-%m-%d'),
+                'latest': latest.strftime('%Y-%m-%d'),
+            }
+
+        # Note: lead_time_stats would require re-parsing with DataFrame
+        # For now, we skip it here (can be added in future optimization)
+        metadata['lead_time_stats'] = None
+
+        return metadata
+
+    except Exception as e:
+        logger.error(f"Error extracting temporal metadata: {e}", exc_info=True)
+        return None
 
 
 @celery_app.task(name="process_document", bind=True, max_retries=3)
@@ -87,6 +146,14 @@ def process_document(self, file_id: str):
             raise Exception("Failed to index chunks in TypeSense")
 
         logger.info(f"Successfully indexed {len(chunks)} chunks for file {file_id}")
+
+        # Extract and store temporal metadata for Excel/CSV files
+        temporal_metadata = None
+        if file_db.file_type in [FileType.EXCEL, FileType.CSV]:
+            temporal_metadata = _extract_temporal_metadata(chunks)
+            if temporal_metadata:
+                file_db.temporal_metadata = temporal_metadata
+                logger.info(f"Stored temporal metadata: {temporal_metadata.get('detected_date_columns', [])}")
 
         # Update status to completed
         file_db.processing_status = ProcessingStatus.COMPLETED

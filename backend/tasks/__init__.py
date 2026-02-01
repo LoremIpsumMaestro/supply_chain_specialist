@@ -24,5 +24,8 @@ celery_app.conf.update(
     worker_max_tasks_per_child=100,
 )
 
+# Import tasks explicitly to ensure they are registered
+from backend.tasks import document_tasks  # noqa
+
 # Auto-discover tasks
 celery_app.autodiscover_tasks(['backend.tasks'])

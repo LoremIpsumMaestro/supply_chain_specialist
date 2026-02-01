@@ -5,7 +5,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from backend.api import auth, conversations, messages, files, alerts
+from backend.api import auth, conversations, messages, files, alerts, temporal
 from backend.db import Base, engine
 
 # Create database tables
@@ -35,6 +35,7 @@ app.include_router(conversations.router)
 app.include_router(messages.router)
 app.include_router(files.router)
 app.include_router(alerts.router)
+app.include_router(temporal.router)
 
 
 @app.get("/")

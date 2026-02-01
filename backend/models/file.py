@@ -2,14 +2,14 @@
 
 from datetime import datetime, timedelta
 from enum import Enum
-from typing import Optional
+from typing import Optional, Dict, List, Any
 from uuid import UUID, uuid4
 
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import Column, String, Integer, DateTime, Text, ForeignKey, Enum as SQLEnum
 from sqlalchemy.orm import relationship
 
-from backend.db import Base, UUID as DBUUID
+from backend.db import Base, UUID as DBUUID, JSON
 
 
 class FileType(str, Enum):
@@ -44,6 +44,7 @@ class FileDB(Base):
     minio_object_key = Column(String(500), nullable=False)
     processing_status = Column(SQLEnum(ProcessingStatus), default=ProcessingStatus.PENDING)
     error_message = Column(Text)
+    temporal_metadata = Column(JSON, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     expires_at = Column(DateTime, nullable=False)
 
@@ -89,6 +90,7 @@ class FileResponse(FileBase):
     minio_object_key: str
     processing_status: ProcessingStatus
     error_message: Optional[str] = None
+    temporal_metadata: Optional[Dict[str, Any]] = None
     created_at: datetime
     expires_at: datetime
 
@@ -100,6 +102,39 @@ class FileUpdate(BaseModel):
     """Schema for updating file status."""
     processing_status: Optional[ProcessingStatus] = None
     error_message: Optional[str] = None
+
+
+# Temporal Metadata Schemas
+class TimeRange(BaseModel):
+    """Time range schema."""
+    earliest: str  # ISO date format YYYY-MM-DD
+    latest: str
+
+
+class LeadTimeStats(BaseModel):
+    """Lead time statistics schema."""
+    mean_days: float
+    median_days: float
+    max_days: float
+    min_days: float
+    std_days: float
+    outliers: List[float]
+    total_records: int
+
+
+class TemporalMetadata(BaseModel):
+    """Temporal metadata schema for files."""
+    upload_date: datetime
+    detected_date_columns: List[str]
+    user_configured_columns: Optional[List[str]] = None
+    time_range: Optional[TimeRange] = None
+    lead_time_stats: Optional[LeadTimeStats] = None
+
+
+class TemporalConfigUpdate(BaseModel):
+    """Schema for updating temporal configuration."""
+    date_columns: Optional[List[str]] = None
+    lead_time_pairs: Optional[List[List[str]]] = None  # List of [start_col, end_col] pairs
 
 
 # MIME type mappings

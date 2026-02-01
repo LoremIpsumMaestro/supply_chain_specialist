@@ -197,6 +197,7 @@ class KnowledgeService:
         top_k: int = 5,
         category: Optional[str] = None,
         tags: Optional[List[str]] = None,
+        query_embedding: Optional[List[float]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Search knowledge base with hybrid search.
@@ -206,13 +207,15 @@ class KnowledgeService:
             top_k: Number of results to return
             category: Optional category filter
             tags: Optional tag filters
+            query_embedding: Optional pre-computed query embedding (for performance)
 
         Returns:
             List of search results with content and metadata
         """
         try:
-            # Generate query embedding
-            query_embedding = rag_service.generate_embedding(query)
+            # Use provided embedding or generate new one
+            if query_embedding is None:
+                query_embedding = rag_service.generate_embedding(query)
 
             if not query_embedding:
                 logger.error("Failed to generate query embedding")

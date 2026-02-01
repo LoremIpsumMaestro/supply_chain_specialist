@@ -1,0 +1,131 @@
+knowledge_items:
+  - title: "Taux de Service"
+    category: "supply_chain"
+    subcategory: "kpis"
+    tags:
+      - kpi
+      - service_client
+      - performance
+    content: |
+      Le taux de service mesure la capacité d'une entreprise à satisfaire la demande client dans les délais prévus.
+
+      Formule : Taux de service (%) = (Commandes livrées à temps / Total des commandes) × 100
+
+      Objectifs typiques :
+      - Industrie : 95-98%
+      - Distribution : 98-99%
+      - E-commerce : 99%+
+
+      Un taux de service élevé améliore la satisfaction client mais peut nécessiter des stocks plus importants.
+      Il faut trouver le bon équilibre entre coût de stock et niveau de service.
+    metadata:
+      source: "KPIs Supply Chain Standard"
+      last_updated: "2026-01"
+
+  - title: "Rotation des Stocks"
+    category: "supply_chain"
+    subcategory: "kpis"
+    tags:
+      - kpi
+      - rotation
+      - stock
+      - inventaire
+    content: |
+      La rotation des stocks (inventory turnover) mesure combien de fois le stock est renouvelé sur une période donnée.
+
+      Formule : Rotation = Coût des marchandises vendues (COGS) / Stock moyen
+
+      Exemples de rotation par secteur :
+      - Alimentaire frais : 50-100 rotations/an
+      - Textile : 4-6 rotations/an
+      - Automobile : 8-12 rotations/an
+      - Électronique : 6-8 rotations/an
+
+      Une rotation élevée indique une bonne gestion des stocks et moins de capital immobilisé.
+      Une rotation trop faible peut signaler des surstocks ou des produits obsolètes.
+    metadata:
+      source: "Benchmarks industrie"
+      last_updated: "2026-01"
+
+  - title: "Couverture de Stock"
+    category: "supply_chain"
+    subcategory: "kpis"
+    tags:
+      - kpi
+      - couverture
+      - stock
+      - prévision
+    content: |
+      La couverture de stock (days of inventory) indique combien de jours de vente le stock actuel peut couvrir.
+
+      Formule : Couverture (jours) = (Stock actuel / Vente moyenne journalière)
+
+      Ou : Couverture (jours) = 365 / Rotation des stocks
+
+      Objectifs recommandés :
+      - Produits à forte rotation : 15-30 jours
+      - Produits standards : 30-60 jours
+      - Produits à faible rotation : 60-90 jours
+      - Pièces de rechange critiques : 90-180 jours
+
+      Une couverture trop faible augmente le risque de rupture.
+      Une couverture trop élevée immobilise du capital et augmente les coûts de stockage.
+    metadata:
+      source: "Best Practices Supply Chain"
+      last_updated: "2026-01"
+
+  - title: "Perfect Order Rate"
+    category: "supply_chain"
+    subcategory: "kpis"
+    tags:
+      - kpi
+      - qualité
+      - excellence
+    content: |
+      Le Perfect Order Rate (taux de commande parfaite) mesure le pourcentage de commandes livrées sans aucune erreur.
+
+      Une commande parfaite respecte tous ces critères :
+      - Livraison complète (toutes les références commandées)
+      - Livraison à temps (dans la fenêtre de livraison promise)
+      - Documentation correcte (facture, bon de livraison)
+      - Aucun dommage produit
+      - Quantités exactes
+
+      Formule : Perfect Order Rate (%) = (Commandes parfaites / Total des commandes) × 100
+
+      Objectif world-class : > 95%
+
+      Ce KPI est très exigeant car un seul défaut sur un seul critère rend la commande imparfaite.
+    metadata:
+      source: "SCOR Model"
+      last_updated: "2026-01"
+
+  - title: "Cash-to-Cash Cycle Time"
+    category: "supply_chain"
+    subcategory: "kpis"
+    tags:
+      - kpi
+      - finance
+      - trésorerie
+      - cash
+    content: |
+      Le Cash-to-Cash Cycle Time mesure le temps entre le paiement des fournisseurs et l'encaissement des clients.
+
+      Formule : C2C = DIO + DSO - DPO
+
+      Où :
+      - DIO (Days Inventory Outstanding) = Jours de stock
+      - DSO (Days Sales Outstanding) = Délai moyen de paiement clients
+      - DPO (Days Payable Outstanding) = Délai moyen de paiement fournisseurs
+
+      Exemple :
+      - DIO = 45 jours de stock
+      - DSO = 30 jours de crédit client
+      - DPO = 60 jours de crédit fournisseur
+      - C2C = 45 + 30 - 60 = 15 jours
+
+      Objectif : Minimiser le C2C pour améliorer la trésorerie.
+      Un C2C négatif signifie que l'entreprise est payée avant de payer ses fournisseurs (idéal).
+    metadata:
+      source: "Financial Supply Chain Metrics"
+      last_updated: "2026-01"

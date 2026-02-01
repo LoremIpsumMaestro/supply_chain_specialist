@@ -17,6 +17,16 @@ export interface ConversationWithMessages extends Conversation {
 
 export type MessageRole = 'user' | 'assistant'
 
+export interface TemporalContext {
+  date?: string
+  rolling_avg_7d?: number
+  rolling_avg_30d?: number
+  vs_previous_month?: string
+  seasonal_pattern?: string
+  lead_time_days?: number
+  [key: string]: any // Allow additional temporal fields
+}
+
 export interface CitationMetadata {
   filename: string
   sheet_name?: string // For Excel files
@@ -25,6 +35,7 @@ export interface CitationMetadata {
   row?: number // For Excel
   column?: number // For Excel
   value?: string // The actual value from source
+  temporal_context?: TemporalContext // Temporal analysis data
 }
 
 export interface Message {

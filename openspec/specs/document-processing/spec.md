@@ -4,45 +4,36 @@
 TBD - created by archiving change implement-mvp-features. Update Purpose after archive.
 ## Requirements
 ### Requirement: Excel Document Parsing
-The system SHALL parse Excel files cell-by-cell with sheet, row, column, and cell reference metadata.
+Excel parser SHALL detect temporal columns and enrich chunks with temporal metadata.
 
-#### Scenario: Parse Excel file with multiple sheets
-- **WHEN** an Excel file with 3 sheets is processed
-- **THEN** all non-empty cells from all sheets are extracted
-- **AND** each cell generates one DocumentChunk with metadata:
+**Changes from original**: Added temporal column detection and metadata enrichment.
+
+#### Scenario: Parse Excel with temporal enrichment
+- **WHEN** an Excel file is parsed with columns "date_commande" and "quantite"
+- **THEN** the parser SHALL detect "date_commande" as a temporal column
+- **AND** enrich each chunk's metadata with the corresponding date value
+- **AND** include `temporal_context.date` in chunk metadata
+
+#### Scenario: Excel chunk with lead time calculation
+- **WHEN** an Excel file has both "date_commande" and "date_livraison" columns
+- **AND** row 12 has values: date_commande="2025-12-01", date_livraison="2025-12-15"
+- **THEN** the chunk for row 12 SHALL include in metadata:
   ```json
   {
-    "filename": "production.xlsx",
-    "file_type": "excel",
-    "sheet_name": "Stocks",
-    "cell_ref": "C12",
-    "row": 12,
-    "column": 3,
-    "value": "150"
+    "temporal_context": {
+      "date_commande": "2025-12-01",
+      "date_livraison": "2025-12-15",
+      "lead_time_days": 14
+    }
   }
   ```
-- **AND** empty cells are skipped
 
-#### Scenario: Parse Excel cell with formula
-- **WHEN** a cell contains a formula (e.g., =SUM(A1:A10))
-- **THEN** the displayed value is extracted (not the formula)
-- **AND** the chunk content contains the calculated result
+#### Scenario: Skip blacklisted temporal columns
+- **WHEN** an Excel file has columns "created_at", "updated_at", "date_commande"
+- **THEN** the parser SHALL detect only "date_commande" as a temporal column
+- **AND** ignore "created_at" and "updated_at" (blacklist pattern)
 
-#### Scenario: Parse Excel merged cells
-- **WHEN** a range of cells is merged (e.g., A1:C1)
-- **THEN** one DocumentChunk is created for the merged cell
-- **AND** the cell_ref references the top-left cell (A1)
-- **AND** the metadata indicates merged range if available
-
-#### Scenario: Parse Excel with headers
-- **WHEN** the first row contains column headers
-- **THEN** the header names are included in chunk metadata
-- **AND** data rows reference their column headers for context
-
-#### Scenario: Parse Excel with numeric formatting
-- **WHEN** a cell contains formatted numbers (e.g., currency, percentages)
-- **THEN** the displayed formatted value is extracted
-- **AND** the raw numeric value is also stored in metadata if available
+---
 
 ### Requirement: PDF Document Parsing
 The system SHALL parse PDF files page-by-page with chunking for long pages.
@@ -130,30 +121,24 @@ The system SHALL parse PowerPoint files slide-by-slide.
 - **AND** metadata indicates content_type: "notes"
 
 ### Requirement: CSV Document Parsing
-The system SHALL parse CSV files row-by-row with column header context.
+CSV parser SHALL detect temporal columns using dateutil parsing and enrich chunks.
 
-#### Scenario: Parse CSV with headers
-- **WHEN** a CSV file with headers in the first row is processed
-- **THEN** each data row generates one DocumentChunk
-- **AND** each chunk includes metadata:
-  ```json
-  {
-    "filename": "stocks.csv",
-    "file_type": "csv",
-    "row_number": 15,
-    "column_headers": ["Product", "Quantity", "Location"]
-  }
-  ```
-- **AND** the chunk content includes column headers for context
+**Changes from original**: Added temporal column detection for CSV files.
 
-#### Scenario: Parse CSV without headers
-- **WHEN** a CSV file has no headers (only data rows)
-- **THEN** each row is parsed with numeric column indexes
-- **AND** column_headers metadata contains ["Column_1", "Column_2", ...]
+#### Scenario: Detect dates in CSV with mixed formats
+- **WHEN** a CSV column "delivery_date" contains values "01/02/2025", "2025-03-15", "15-04-2025"
+- **THEN** the parser SHALL detect the column as temporal
+- **AND** normalize all dates to ISO format (YYYY-MM-DD)
+- **AND** enrich chunk metadata with `temporal_context.delivery_date`
 
-#### Scenario: Parse CSV with quoted fields
-- **WHEN** a CSV file contains fields with commas in quotes ("Paris, France")
-- **THEN** quoted fields are parsed correctly without splitting on internal commas
+#### Scenario: CSV with time series data
+- **WHEN** a CSV has columns "month" and "sales_amount"
+- **AND** "month" contains "2025-01", "2025-02", "2025-03", ... "2025-12"
+- **THEN** the parser SHALL detect "month" as temporal
+- **AND** trigger trend analysis (rolling averages, variation)
+- **AND** enrich chunks with `temporal_context.rolling_avg_30d` and `temporal_context.vs_previous_month`
+
+---
 
 ### Requirement: Text Document Parsing
 The system SHALL parse plain text files with line or paragraph-based chunking.
@@ -225,21 +210,22 @@ The system SHALL apply intelligent chunking to balance citation precision and co
 - **AND** column headers are included in each chunk for context
 
 ### Requirement: Metadata Completeness
-The system SHALL include all necessary metadata for accurate citation generation.
+All document chunks SHALL include upload date and temporal metadata when applicable.
 
-#### Scenario: Chunk metadata enables precise citations
-- **WHEN** a chunk is generated by any parser
-- **THEN** the metadata includes:
-  - filename (original filename)
-  - file_type (excel, pdf, word, powerpoint, csv, text)
-  - source-specific fields (sheet_name, cell_ref, page, slide_number, etc.)
-  - value or text content
-- **AND** the metadata is sufficient to generate a citation like:
-  - "Selon la cellule C12 (feuille 'Stocks' du fichier production.xlsx): 150"
-  - "D'après la page 3 du fichier rapport.pdf: ..."
+**Changes from original**: Added upload_date and temporal_context to required metadata.
 
-#### Scenario: Chunk content includes context
-- **WHEN** a chunk is extracted from a structured document (Excel, CSV)
-- **THEN** the chunk content includes surrounding context (e.g., row headers, column names)
-- **AND** the context enables LLM to understand the meaning without requiring additional chunks
+#### Scenario: Chunk metadata includes upload date
+- **WHEN** any document is parsed (Excel, PDF, CSV, Word, PowerPoint, Text)
+- **THEN** ALL chunks SHALL include `metadata.upload_date` with ISO timestamp
+- **AND** format: "2026-01-29T10:30:00Z"
+
+#### Scenario: Temporal metadata present for Excel/CSV
+- **WHEN** an Excel or CSV chunk is created from a row with detected temporal columns
+- **THEN** the metadata SHALL include `temporal_context` object
+- **AND** include detected date values, lead times (if calculated), and trends (if available)
+
+#### Scenario: No temporal context for non-temporal documents
+- **WHEN** a PDF or Word document has no detected temporal patterns
+- **THEN** chunk metadata SHALL NOT include `temporal_context`
+- **AND** SHALL still include `metadata.upload_date`
 

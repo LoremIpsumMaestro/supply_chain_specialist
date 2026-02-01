@@ -1,0 +1,70 @@
+{
+  "knowledge_items": [
+    {
+      "title": "Définition du Lead Time",
+      "category": "supply_chain",
+      "subcategory": "concepts_de_base",
+      "tags": ["lead_time", "délai", "approvisionnement"],
+      "content": "Le lead time (ou délai d'approvisionnement) est le temps total qui s'écoule entre la passation d'une commande et la réception effective de la marchandise. Il comprend plusieurs étapes : le temps de traitement de la commande, le temps de production (si applicable), le temps de transit et le temps de réception/mise en stock. Un lead time maîtrisé permet d'optimiser les niveaux de stock et de réduire les coûts de stockage.",
+      "metadata": {
+        "source": "Formation Supply Chain 101",
+        "last_updated": "2026-01"
+      }
+    },
+    {
+      "title": "Stock de Sécurité",
+      "category": "supply_chain",
+      "subcategory": "gestion_stocks",
+      "tags": ["stock", "sécurité", "buffer"],
+      "content": "Le stock de sécurité (ou safety stock) est une quantité de produits conservée en surplus pour faire face aux variations imprévues de la demande ou des délais d'approvisionnement. Le calcul du stock de sécurité prend en compte : la variabilité de la demande, la variabilité du lead time, et le niveau de service souhaité. Formule de base : Stock de sécurité = Z × σ × √LT, où Z est le coefficient du niveau de service, σ l'écart-type de la demande, et LT le lead time.",
+      "metadata": {
+        "source": "Guide pratique gestion des stocks",
+        "last_updated": "2026-01"
+      }
+    },
+    {
+      "title": "Just-In-Time (JIT)",
+      "category": "supply_chain",
+      "subcategory": "méthodes",
+      "tags": ["jit", "flux_tendus", "lean"],
+      "content": "Le Just-In-Time (flux tendus) est une méthode de gestion de production qui vise à produire et livrer les bons produits, au bon moment, dans les bonnes quantités, avec un minimum de gaspillage. Les principes clés du JIT incluent : élimination des stocks inutiles, réduction des temps de cycle, amélioration continue (kaizen), et synchronisation avec la demande client. Cette approche nécessite une excellente coordination avec les fournisseurs et une grande fiabilité des processus.",
+      "metadata": {
+        "source": "Méthodologies Lean Manufacturing",
+        "last_updated": "2026-01"
+      }
+    },
+    {
+      "title": "Coût Total de Possession (TCO)",
+      "category": "supply_chain",
+      "subcategory": "finance",
+      "tags": ["tco", "coûts", "achats"],
+      "content": "Le Coût Total de Possession (Total Cost of Ownership - TCO) représente l'ensemble des coûts associés à l'achat, l'utilisation et la maintenance d'un produit tout au long de son cycle de vie. Le TCO comprend : le prix d'achat, les coûts de transport, les coûts de stockage, les coûts de qualité (contrôles, retours, rebuts), les coûts administratifs, et les coûts de fin de vie. Analyser le TCO plutôt que simplement le prix d'achat permet de prendre des décisions d'approvisionnement plus éclairées.",
+      "metadata": {
+        "source": "Guide achats responsables",
+        "last_updated": "2026-01"
+      }
+    },
+    {
+      "title": "Méthode ABC",
+      "category": "supply_chain",
+      "subcategory": "gestion_stocks",
+      "tags": ["abc", "classification", "pareto"],
+      "content": "La méthode ABC est une technique de classification des stocks basée sur le principe de Pareto (20/80). Elle classe les articles en trois catégories : Catégorie A (15-20% des articles, 75-80% de la valeur) : articles critiques nécessitant un suivi rigoureux et des contrôles fréquents. Catégorie B (30-40% des articles, 15-20% de la valeur) : articles intermédiaires avec un suivi modéré. Catégorie C (40-50% des articles, 5-10% de la valeur) : articles peu critiques avec un suivi simplifié. Cette classification permet d'optimiser les efforts de gestion en se concentrant sur les articles les plus importants.",
+      "metadata": {
+        "source": "Optimisation des stocks",
+        "last_updated": "2026-01"
+      }
+    },
+    {
+      "title": "Rupture de Stock",
+      "category": "supply_chain",
+      "subcategory": "risques",
+      "tags": ["rupture", "stockout", "disponibilité"],
+      "content": "Une rupture de stock (stockout) se produit lorsqu'un article n'est plus disponible pour répondre à la demande. Les conséquences incluent : perte de ventes immédiates, insatisfaction client, perte de parts de marché, et coûts d'opportunité. Les causes principales sont : prévisions de demande inexactes, variabilité excessive du lead time, problèmes de qualité fournisseur, et événements imprévus (grèves, catastrophes naturelles). Pour prévenir les ruptures, il faut : améliorer la précision des prévisions, maintenir un stock de sécurité approprié, diversifier les sources d'approvisionnement, et mettre en place des systèmes d'alerte précoce.",
+      "metadata": {
+        "source": "Gestion des risques supply chain",
+        "last_updated": "2026-01"
+      }
+    }
+  ]
+}

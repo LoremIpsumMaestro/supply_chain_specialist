@@ -8,6 +8,7 @@ import asyncio
 import json
 import logging
 import requests
+from datetime import datetime
 from typing import AsyncGenerator, List, Optional
 from uuid import UUID
 
@@ -51,6 +52,9 @@ class LLMService:
         Yields:
             MessageStreamChunk objects with streaming content
         """
+        import time
+        start_total = time.time()
+
         try:
             # Get last user message
             last_message = conversation_history[-1] if conversation_history else None
@@ -61,37 +65,60 @@ class LLMService:
             user_query = last_message.content
 
             # Check if conversation has uploaded files
+            start_files = time.time()
             files = db.query(FileDB).filter(
                 FileDB.conversation_id == conversation_id,
                 FileDB.user_id == user_id,
             ).all()
+            logger.info(f"⏱️ File query took: {time.time() - start_files:.3f}s")
 
-            # Perform searches: knowledge base + user documents
+            # Perform searches: knowledge base + user documents (OPTIMIZED: parallel + shared embedding)
             rag_context = ""
             search_results = []
             knowledge_results = []
 
-            # 1. Always search knowledge base
-            logger.info(f"Searching knowledge base for query: {user_query[:50]}...")
-            knowledge_results = knowledge_service.search_knowledge(
-                query=user_query,
-                top_k=3,  # Top 3 from knowledge base
-            )
+            # OPTIMIZATION: Generate embedding once for both searches
+            start_embedding = time.time()
+            query_embedding = rag_service.generate_embedding(user_query)
+            logger.info(f"⏱️ Embedding generation took: {time.time() - start_embedding:.3f}s")
 
-            if knowledge_results:
-                logger.info(f"Knowledge base search returned {len(knowledge_results)} results")
+            if query_embedding:
+                # OPTIMIZATION: Run both searches in parallel using asyncio.to_thread
+                start_searches = time.time()
+                logger.info(f"Running parallel searches for query: {user_query[:50]}...")
 
-            # 2. Search user documents if files exist
-            if files:
-                logger.info(f"Performing RAG search in user documents for query: {user_query[:50]}...")
-                search_results = rag_service.hybrid_search(
-                    query=user_query,
-                    user_id=str(user_id),
-                    top_k=5,  # Top 5 from user documents
+                # Define async wrappers for synchronous functions
+                async def search_kb():
+                    return await asyncio.to_thread(
+                        knowledge_service.search_knowledge,
+                        query=user_query,
+                        top_k=3,
+                        query_embedding=query_embedding,
+                    )
+
+                async def search_docs():
+                    if files:
+                        return await asyncio.to_thread(
+                            rag_service.hybrid_search,
+                            query=user_query,
+                            user_id=str(user_id),
+                            top_k=5,
+                            query_embedding=query_embedding,
+                        )
+                    return []
+
+                # Execute searches in parallel
+                knowledge_results, search_results = await asyncio.gather(
+                    search_kb(),
+                    search_docs(),
                 )
 
-                if search_results:
-                    logger.info(f"User documents search returned {len(search_results)} results")
+                searches_duration = time.time() - start_searches
+                logger.info(f"⏱️ Parallel searches took: {searches_duration:.3f}s")
+                logger.info(f"Knowledge base returned {len(knowledge_results)} results")
+                logger.info(f"User documents returned {len(search_results)} results")
+            else:
+                logger.warning("Failed to generate query embedding, skipping searches")
 
             # 3. Build combined context
             if knowledge_results or search_results:
@@ -114,11 +141,21 @@ class LLMService:
                     rag_context = "Aucune information pertinente n'a été trouvée dans vos documents ou dans la base de connaissances sur ce sujet."
 
             # Build messages for LLM
+            start_build = time.time()
             messages = self._build_messages(conversation_history, rag_context)
+            logger.info(f"⏱️ Build messages took: {time.time() - start_build:.3f}s")
+
+            logger.info(f"⏱️ TOTAL TIME BEFORE STREAMING: {time.time() - start_total:.3f}s")
 
             # Stream response from Ollama
+            start_stream = time.time()
+            first_chunk = True
             async for chunk in self._stream_ollama_response(messages):
+                if first_chunk:
+                    logger.info(f"⏱️ Time to FIRST token: {time.time() - start_total:.3f}s")
+                    first_chunk = False
                 yield chunk
+            logger.info(f"⏱️ Streaming took: {time.time() - start_stream:.3f}s")
 
             # Send final chunk with citations from both sources
             all_citations = []
@@ -164,6 +201,7 @@ class LLMService:
                 "model": self.model,
                 "messages": messages,
                 "stream": True,
+                "keep_alive": "5m",  # Keep model loaded for 5 minutes
                 "options": {
                     "temperature": self.temperature,
                 }
@@ -173,11 +211,14 @@ class LLMService:
             print(f"🔍 DEBUG: Payload keys: {payload.keys()}")
 
             # Call Ollama chat API with streaming
+            # Use tuple timeout: (connect_timeout, read_timeout)
+            # - connect_timeout: 10s to detect if Ollama is down
+            # - read_timeout: 300s (5 min) for streaming generation
             response = requests.post(
                 url,
                 json=payload,
                 stream=True,
-                timeout=60,
+                timeout=(10, 300),
             )
 
             print(f"🔍 DEBUG: Ollama response status: {response.status_code}")
@@ -203,8 +244,8 @@ class LLMService:
                                 is_final=False,
                             )
 
-                            # Small delay to simulate natural typing
-                            await asyncio.sleep(0.01)
+                            # Small delay removed for performance
+                            # await asyncio.sleep(0.01)
 
                     except json.JSONDecodeError as e:
                         logger.error(f"Error decoding JSON chunk: {e}")
@@ -225,7 +266,24 @@ class LLMService:
         Returns:
             List of message dicts for Ollama API
         """
+        # Inject current system date in French format
+        try:
+            import locale
+            # Try to set French locale for month names
+            try:
+                locale.setlocale(locale.LC_TIME, 'fr_FR.UTF-8')
+            except locale.Error:
+                # Fallback: Use manual month mapping if locale not available
+                logger.debug("French locale not available, using manual date formatting")
+
+            current_date = datetime.now().strftime('%d %B %Y')
+            logger.debug(f"Injecting system date: {current_date}")
+        except Exception as e:
+            logger.warning(f"Error formatting date, using ISO format: {e}")
+            current_date = datetime.now().strftime('%Y-%m-%d')
+
         system_content = (
+            f"DATE ACTUELLE: {current_date}\n\n"
             "Tu es un assistant IA spécialisé en Supply Chain. "
             "Tu aides les professionnels (Opérationnels et Directeurs) à analyser "
             "leurs données et contextes opérationnels.\n\n"

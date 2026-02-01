@@ -117,71 +117,49 @@ The system SHALL perform hybrid search combining keyword matching and semantic v
 - **AND** this is achieved by including created_at timestamp in scoring formula
 
 ### Requirement: RAG Context Injection
-The system SHALL inject retrieved chunks into LLM prompts with citation metadata.
+The LLM service SHALL inject RAG context AND system date into all prompts for anti-hallucination and temporal awareness.
 
-#### Scenario: Relevant chunks included in LLM prompt
-- **WHEN** hybrid search returns 5 relevant chunks for a user query
-- **THEN** the chunks are formatted into a context string:
-  ```
-  Voici les informations pertinentes de vos documents:
+**Changes from original**: Added system date injection requirement.
 
-  [Source 1: production.xlsx, feuille 'Stocks', cellule C12]
-  Contenu: Quantité en stock: 150 unités
+#### Scenario: System date injected in prompt
+- **WHEN** the LLM builds a system prompt for any query
+- **THEN** the prompt SHALL include the current date in French format before RAG context
+- **AND** use format: "DATE ACTUELLE: DD Month YYYY" (example: "DATE ACTUELLE: 29 janvier 2026")
 
-  [Source 2: rapport.pdf, page 3]
-  Contenu: Le stock de sécurité recommandé est de 200 unités pour ce produit.
-  ```
-- **AND** this context is injected into the system prompt before the user query
-- **AND** the LLM is instructed to always cite sources using the exact format provided
+#### Scenario: Combined temporal and RAG context
+- **WHEN** a user asks "Are any deliveries late?"
+- **AND** RAG retrieves chunks with delivery dates
+- **THEN** the system prompt SHALL include:
+  1. Current system date
+  2. RAG context with document excerpts and dates
+  3. Instructions to calculate delays using the current date
 
-#### Scenario: LLM generates response with citations
-- **WHEN** the LLM generates a response using RAG context
-- **THEN** the response includes inline citations matching the source format
-- **AND** citations are parsed from the response text
-- **AND** citation metadata is extracted and stored in the message.citations field
-- **AND** citations are displayed in the UI with the Citation component
+#### Scenario: No RAG results but date still injected
+- **WHEN** a user asks a general question with no relevant RAG results
+- **THEN** the system SHALL still inject the current date in the prompt
+- **AND** the LLM can answer using general knowledge with temporal awareness
 
-#### Scenario: LLM temperature set for anti-hallucination
-- **WHEN** a RAG-enabled chat request is processed
-- **THEN** the LLM temperature is set to 0.1 (deterministic)
-- **AND** the system prompt includes:
-  - "Réponds UNIQUEMENT en te basant sur les sources fournies."
-  - "Si l'information n'est pas dans les sources, dis clairement que tu ne l'as pas trouvée."
-  - "N'invente JAMAIS d'informations."
-- **AND** this prevents hallucinations
+#### Scenario: Temporal context in RAG results
+- **WHEN** RAG search returns chunks with `temporal_context` in metadata
+- **THEN** the system SHALL include temporal metrics in the RAG context string
+- **AND** format example: "[Source 1: sales.xlsx, cellule C12, date: 15 déc 2025, tendance: +25% vs mois précédent]"
 
-#### Scenario: No relevant chunks found
-- **WHEN** hybrid search returns no results for a query
-- **THEN** the LLM prompt includes no context (only user query)
-- **AND** the system prompt instructs: "Aucune information pertinente n'a été trouvée dans les documents. Informe l'utilisateur que tu n'as pas de données sur ce sujet."
-- **AND** the LLM responds accordingly without hallucinating
+---
 
 ### Requirement: Citation Extraction and Display
-The system SHALL extract citations from LLM responses and display them with rich metadata.
+Citations SHALL include temporal context metadata when available.
 
-#### Scenario: Parse citations from LLM response
-- **WHEN** the LLM response contains text like "Selon la cellule C12 (feuille 'Stocks' du fichier production.xlsx): 150"
-- **THEN** a citation parser extracts:
-  - Citation text: "Selon la cellule C12..."
-  - Source metadata: {filename: "production.xlsx", sheet_name: "Stocks", cell_ref: "C12"}
-- **AND** the citation is stored in message.citations as CitationMetadata
+**Changes from original**: Extended to include temporal metadata in citations.
 
-#### Scenario: Display Excel citation in UI
-- **WHEN** a message contains an Excel citation
-- **THEN** the citation is displayed as a Badge component
-- **AND** the badge text shows: "📊 production.xlsx - Stocks!C12"
-- **AND** hovering shows a tooltip with full metadata (filename, sheet, cell, value)
+#### Scenario: Citation with temporal context
+- **WHEN** a search result includes `temporal_context` in metadata
+- **THEN** the citation SHALL display the date and temporal metrics
+- **AND** format example: "Selon la cellule C12 (feuille 'Ventes', fichier sales.xlsx, date: 15 décembre 2025): 150 unités (+25% vs novembre)"
 
-#### Scenario: Display PDF citation in UI
-- **WHEN** a message contains a PDF citation
-- **THEN** the citation is displayed as a Badge component
-- **AND** the badge text shows: "📄 rapport.pdf - Page 3"
-- **AND** hovering shows a tooltip with excerpt text
-
-#### Scenario: Multiple citations in one message
-- **WHEN** a message contains 3 citations from different sources
-- **THEN** each citation is displayed as a separate badge
-- **AND** badges are inline with the text at the relevant position
+#### Scenario: Citation without temporal context
+- **WHEN** a PDF chunk has no temporal metadata
+- **THEN** the citation SHALL use the original format without temporal info
+- **AND** format example: "Selon la page 3 du fichier rapport.pdf: ..."
 
 ### Requirement: RAG Query Performance
 The system SHALL meet performance targets for search latency and response time.

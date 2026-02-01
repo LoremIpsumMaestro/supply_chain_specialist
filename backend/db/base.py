@@ -1,7 +1,8 @@
 """Database base configuration."""
 
-from sqlalchemy import create_engine, TypeDecorator, CHAR
-from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID
+import json
+from sqlalchemy import create_engine, TypeDecorator, CHAR, Text
+from sqlalchemy.dialects.postgresql import UUID as PostgreSQLUUID, JSONB as PostgreSQLJSONB
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from uuid import UUID as PythonUUID
@@ -42,6 +43,39 @@ class UUID(TypeDecorator):
             return value
         else:
             return PythonUUID(value)
+
+
+# Custom JSON type that works with both PostgreSQL and SQLite
+class JSON(TypeDecorator):
+    """Platform-independent JSON type.
+
+    Uses PostgreSQL's JSONB type when available, otherwise uses Text storing JSON as strings.
+    """
+    impl = Text
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == 'postgresql':
+            return dialect.type_descriptor(PostgreSQLJSONB())
+        else:
+            return dialect.type_descriptor(Text())
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return value
+        if dialect.name == 'postgresql':
+            return value
+        else:
+            return json.dumps(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None:
+            return value
+        if dialect.name == 'postgresql':
+            return value
+        else:
+            return json.loads(value)
+
 
 # Get DATABASE_URL from settings
 DATABASE_URL = settings.DATABASE_URL

@@ -100,6 +100,7 @@ class RAGService:
                 json={
                     "model": settings.OLLAMA_EMBEDDING_MODEL,
                     "prompt": text,
+                    "keep_alive": "5m",  # Keep model loaded for 5 minutes
                 },
                 timeout=30,
             )
@@ -214,6 +215,7 @@ class RAGService:
         user_id: str,
         top_k: int = 5,
         file_id: Optional[str] = None,
+        query_embedding: Optional[List[float]] = None,
     ) -> List[Dict[str, Any]]:
         """
         Perform hybrid search (keyword + semantic) in TypeSense.
@@ -223,13 +225,15 @@ class RAGService:
             user_id: User ID for RLS filtering
             top_k: Number of results to return
             file_id: Optional file ID to restrict search
+            query_embedding: Optional pre-computed query embedding (for performance)
 
         Returns:
             List of search results with content and metadata
         """
         try:
-            # Generate query embedding
-            query_embedding = self.generate_embedding(query)
+            # Use provided embedding or generate new one
+            if query_embedding is None:
+                query_embedding = self.generate_embedding(query)
 
             if not query_embedding:
                 logger.error("Failed to generate query embedding")
@@ -310,6 +314,27 @@ class RAGService:
                 source = f"[Source {idx}: {filename}, ligne {metadata.get('row_number')}]"
             else:
                 source = f"[Source {idx}: {filename}]"
+
+            # Add temporal context if available
+            if 'temporal_context' in metadata:
+                tc = metadata['temporal_context']
+                temporal_info = []
+
+                # Add date info
+                for key, value in tc.items():
+                    if value and ('date' in key.lower() or 'livraison' in key.lower() or 'commande' in key.lower()):
+                        temporal_info.append(f"{key}: {value}")
+
+                # Add trend metrics if present
+                if tc.get('rolling_avg_30d'):
+                    temporal_info.append(f"moyenne 30j: {tc['rolling_avg_30d']}")
+                if tc.get('vs_previous_month'):
+                    temporal_info.append(f"évolution: {tc['vs_previous_month']}")
+                if tc.get('seasonal_pattern'):
+                    temporal_info.append(f"tendance: {tc['seasonal_pattern']}")
+
+                if temporal_info:
+                    source += f" ({', '.join(temporal_info)})"
 
             context_parts.append(f"\n{source}\nContenu: {content}\n")
 

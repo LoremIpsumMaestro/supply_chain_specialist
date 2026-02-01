@@ -4,6 +4,7 @@ import io
 import logging
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
+from datetime import datetime
 from typing import List, Optional, Dict, Any
 
 import pandas as pd
@@ -57,6 +58,10 @@ class ExcelParser(DocumentParser):
         try:
             # Load workbook from bytes
             workbook = load_workbook(io.BytesIO(file_bytes), data_only=True)
+            upload_date = datetime.utcnow().isoformat()
+
+            # Import temporal service for temporal analysis
+            from backend.services.temporal_service import temporal_service
 
             for sheet_name in workbook.sheetnames:
                 sheet = workbook[sheet_name]
@@ -66,6 +71,44 @@ class ExcelParser(DocumentParser):
                 for col_idx, cell in enumerate(sheet[1], start=1):
                     if cell.value:
                         headers[col_idx] = str(cell.value)
+
+                # Convert sheet to DataFrame for temporal analysis
+                data = []
+                for row in sheet.iter_rows(min_row=2, values_only=True):  # Skip header
+                    data.append(row)
+
+                if data and headers:
+                    df = pd.DataFrame(data, columns=list(headers.values()))
+
+                    # Detect temporal columns
+                    temporal_cols = temporal_service.detect_temporal_columns(df, df.columns.tolist())
+                    logger.info(f"Detected temporal columns in {sheet_name}: {temporal_cols}")
+
+                    # Identify lead time pairs
+                    lead_time_pairs = temporal_service.identify_lead_time_pairs(temporal_cols)
+                    lead_time_stats_map = {}
+
+                    # Calculate lead times for each pair
+                    for start_col, end_col in lead_time_pairs:
+                        stats = temporal_service.calculate_lead_times(df, start_col, end_col)
+                        if stats:
+                            lead_time_stats_map[f"{start_col}_to_{end_col}"] = stats
+                            logger.info(f"Calculated lead times: {start_col} → {end_col}")
+
+                    # Convert DataFrame dates to dict for row lookup
+                    temporal_data_by_row = {}
+                    if temporal_cols:
+                        for row_idx in range(len(df)):
+                            temporal_data_by_row[row_idx] = {}
+                            for col in temporal_cols:
+                                val = df.iloc[row_idx][col]
+                                if pd.notna(val):
+                                    try:
+                                        # Try to convert to datetime and format
+                                        dt = pd.to_datetime(val)
+                                        temporal_data_by_row[row_idx][col] = dt.strftime('%Y-%m-%d')
+                                    except Exception:
+                                        temporal_data_by_row[row_idx][col] = str(val)
 
                 # Iterate through all cells
                 for row in sheet.iter_rows(min_row=1):
@@ -78,21 +121,29 @@ class ExcelParser(DocumentParser):
                             # Content includes context for better RAG
                             content = f"{column_header}: {value}"
 
-                            # Add previous/next cell context if in same row (optional enhancement)
-                            # For now, keep it simple
+                            # Base metadata
+                            metadata = {
+                                "filename": filename,
+                                "file_type": "excel",
+                                "sheet_name": sheet_name,
+                                "cell_ref": cell.coordinate,  # e.g., "C12"
+                                "row": cell.row,
+                                "column": cell.column,
+                                "value": value,
+                                "column_header": column_header,
+                                "upload_date": upload_date,
+                            }
+
+                            # Add temporal context if this row has temporal data
+                            row_idx = cell.row - 2  # Adjust for 0-indexed df (and skip header)
+                            if row_idx >= 0 and row_idx in temporal_data_by_row:
+                                temporal_context = temporal_data_by_row[row_idx]
+                                if temporal_context:
+                                    metadata["temporal_context"] = temporal_context
 
                             chunk = DocumentChunk(
                                 content=content,
-                                metadata={
-                                    "filename": filename,
-                                    "file_type": "excel",
-                                    "sheet_name": sheet_name,
-                                    "cell_ref": cell.coordinate,  # e.g., "C12"
-                                    "row": cell.row,
-                                    "column": cell.column,
-                                    "value": value,
-                                    "column_header": column_header,
-                                },
+                                metadata=metadata,
                                 file_type=FileType.EXCEL,
                             )
                             chunks.append(chunk)
@@ -116,6 +167,7 @@ class PDFParser(DocumentParser):
         - filename, file_type, page, chunk_index (if split)
         """
         chunks = []
+        upload_date = datetime.utcnow().isoformat()
 
         try:
             pdf_reader = PdfReader(io.BytesIO(file_bytes))
@@ -143,6 +195,7 @@ class PDFParser(DocumentParser):
                                             "file_type": "pdf",
                                             "page": page_num,
                                             "chunk_index": chunk_index,
+                                            "upload_date": upload_date,
                                         },
                                         file_type=FileType.PDF,
                                     )
@@ -172,6 +225,7 @@ class PDFParser(DocumentParser):
                                 "file_type": "pdf",
                                 "page": page_num,
                                 "chunk_index": 0,
+                                "upload_date": upload_date,
                             },
                             file_type=FileType.PDF,
                         )
@@ -196,6 +250,7 @@ class WordParser(DocumentParser):
         - filename, file_type, paragraph_index
         """
         chunks = []
+        upload_date = datetime.utcnow().isoformat()
 
         try:
             doc = DocxDocument(io.BytesIO(file_bytes))
@@ -210,6 +265,7 @@ class WordParser(DocumentParser):
                             "filename": filename,
                             "file_type": "word",
                             "paragraph_index": para_idx,
+                            "upload_date": upload_date,
                         },
                         file_type=FileType.WORD,
                     )
@@ -227,6 +283,7 @@ class WordParser(DocumentParser):
                                 "file_type": "word",
                                 "table_index": table_idx,
                                 "row_index": row_idx,
+                                "upload_date": upload_date,
                             },
                             file_type=FileType.WORD,
                         )
@@ -251,6 +308,7 @@ class PowerPointParser(DocumentParser):
         - filename, file_type, slide_number, content_type (title/body/notes)
         """
         chunks = []
+        upload_date = datetime.utcnow().isoformat()
 
         try:
             prs = Presentation(io.BytesIO(file_bytes))
@@ -267,6 +325,7 @@ class PowerPointParser(DocumentParser):
                                 "file_type": "powerpoint",
                                 "slide_number": slide_num,
                                 "content_type": "title",
+                                "upload_date": upload_date,
                             },
                             file_type=FileType.POWERPOINT,
                         )
@@ -288,6 +347,7 @@ class PowerPointParser(DocumentParser):
                             "file_type": "powerpoint",
                             "slide_number": slide_num,
                             "content_type": "body",
+                            "upload_date": upload_date,
                         },
                         file_type=FileType.POWERPOINT,
                     )
@@ -304,6 +364,7 @@ class PowerPointParser(DocumentParser):
                                 "file_type": "powerpoint",
                                 "slide_number": slide_num,
                                 "content_type": "notes",
+                                "upload_date": upload_date,
                             },
                             file_type=FileType.POWERPOINT,
                         )
@@ -332,8 +393,30 @@ class CSVParser(DocumentParser):
         try:
             # Try to read CSV with pandas
             df = pd.read_csv(io.BytesIO(file_bytes))
+            upload_date = datetime.utcnow().isoformat()
 
             column_headers = df.columns.tolist()
+
+            # Import temporal service for temporal analysis
+            from backend.services.temporal_service import temporal_service
+
+            # Detect temporal columns
+            temporal_cols = temporal_service.detect_temporal_columns(df, df.columns.tolist())
+            logger.info(f"Detected temporal columns in CSV: {temporal_cols}")
+
+            # Calculate temporal data for each row
+            temporal_data_by_row = {}
+            if temporal_cols:
+                for row_idx in range(len(df)):
+                    temporal_data_by_row[row_idx] = {}
+                    for col in temporal_cols:
+                        val = df.iloc[row_idx][col]
+                        if pd.notna(val):
+                            try:
+                                dt = pd.to_datetime(val)
+                                temporal_data_by_row[row_idx][col] = dt.strftime('%Y-%m-%d')
+                            except Exception:
+                                temporal_data_by_row[row_idx][col] = str(val)
 
             for row_idx, row in df.iterrows():
                 # Build content with column headers for context
@@ -346,14 +429,22 @@ class CSVParser(DocumentParser):
                 if row_content:
                     content = " | ".join(row_content)
 
+                    # Base metadata
+                    metadata = {
+                        "filename": filename,
+                        "file_type": "csv",
+                        "row_number": row_idx + 2,  # +2 because pandas 0-indexed + header row
+                        "column_headers": column_headers,
+                        "upload_date": upload_date,
+                    }
+
+                    # Add temporal context if available
+                    if row_idx in temporal_data_by_row and temporal_data_by_row[row_idx]:
+                        metadata["temporal_context"] = temporal_data_by_row[row_idx]
+
                     chunk = DocumentChunk(
                         content=content,
-                        metadata={
-                            "filename": filename,
-                            "file_type": "csv",
-                            "row_number": row_idx + 2,  # +2 because pandas 0-indexed + header row
-                            "column_headers": column_headers,
-                        },
+                        metadata=metadata,
                         file_type=FileType.CSV,
                     )
                     chunks.append(chunk)
@@ -377,6 +468,7 @@ class TextParser(DocumentParser):
         - filename, file_type, line_number or paragraph_index
         """
         chunks = []
+        upload_date = datetime.utcnow().isoformat()
 
         try:
             text = file_bytes.decode('utf-8', errors='ignore')
@@ -405,6 +497,7 @@ class TextParser(DocumentParser):
                                             "filename": filename,
                                             "file_type": "text",
                                             "paragraph_index": para_idx,
+                                            "upload_date": upload_date,
                                         },
                                         file_type=FileType.TEXT,
                                     )
@@ -429,6 +522,7 @@ class TextParser(DocumentParser):
                                 "filename": filename,
                                 "file_type": "text",
                                 "paragraph_index": para_idx,
+                                "upload_date": upload_date,
                             },
                             file_type=FileType.TEXT,
                         )

@@ -12,6 +12,15 @@ Assistant IA spécialisé pour professionnels Supply Chain avec interface de cha
 - ✅ Design responsive (desktop, tablet, mobile)
 - ✅ Gestion des conversations (créer, supprimer, basculer)
 
+## 🕐 Intelligence Temporelle (V1)
+
+- ✅ **Injection automatique de la date système** : Le LLM connaît toujours la date actuelle pour calculer des retards
+- ✅ **Détection automatique des colonnes de dates** : Identification intelligente des colonnes temporelles dans Excel/CSV
+- ✅ **Calcul automatique des lead times** : Délais entre commandes et livraisons calculés automatiquement
+- ✅ **Analyse de tendances** : Moyennes glissantes, variations mensuelles, détection de saisonnalité
+- ✅ **Citations enrichies** : Les citations incluent le contexte temporel (dates, variations, tendances)
+- ✅ **Configuration manuelle** : Possibilité de corriger les colonnes détectées si nécessaire
+
 ## 🏗️ Architecture
 
 ### Backend
@@ -91,6 +100,10 @@ pip install -r requirements.txt
 # Appliquer les migrations
 psql -U supply_chain_user -d supply_chain_ai -f db/migrations/001_create_conversations_and_messages.sql
 psql -U supply_chain_user -d supply_chain_ai -f db/migrations/002_setup_purge_job.sql
+psql -U supply_chain_user -d supply_chain_ai -f db/migrations/003_create_files_table.sql
+psql -U supply_chain_user -d supply_chain_ai -f db/migrations/004_create_alerts_table.sql
+psql -U supply_chain_user -d supply_chain_ai -f db/migrations/005_create_users_table.sql
+psql -U supply_chain_user -d supply_chain_ai -f db/migrations/006_add_temporal_metadata.sql
 
 # Lancer le serveur
 python -m backend.main
@@ -167,6 +180,41 @@ npm run test
 cd frontend
 npm run test:e2e
 ```
+
+## 💡 Utilisation de l'Intelligence Temporelle
+
+### Questions Temporelles Supportées
+
+L'assistant peut maintenant répondre à des questions temporelles complexes :
+
+```
+"Cette livraison est-elle en retard ?"
+→ Calcule le délai par rapport à la date actuelle et signale les retards
+
+"Quelle est la tendance des ventes ?"
+→ Analyse les variations mensuelles et identifie les patterns saisonniers
+
+"Quel est le lead time moyen de mes fournisseurs ?"
+→ Calcule automatiquement les délais entre commandes et livraisons
+
+"Y a-t-il des commandes avec des délais anormaux ?"
+→ Détecte les outliers (>2 écarts-types de la moyenne)
+```
+
+### Détection Automatique
+
+Le système détecte automatiquement les colonnes de dates dans vos fichiers Excel/CSV :
+- Colonnes nommées : `date_commande`, `date_livraison`, `order_date`, `delivery_date`, etc.
+- Validation du format : Vérifie que les valeurs sont bien des dates valides
+- Calcul des lead times : Si 2 colonnes temporelles détectées → calcul automatique des délais
+
+### Configuration Manuelle
+
+Si la détection automatique échoue, vous pouvez configurer manuellement :
+1. Upload votre fichier
+2. Accédez au panneau "Analyse Temporelle"
+3. Sélectionnez les colonnes de dates pertinentes
+4. Cliquez sur "Recalculer"
 
 ## 📚 Documentation
 
