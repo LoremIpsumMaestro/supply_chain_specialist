@@ -60,11 +60,16 @@ docker-compose.override.yml
 *.db
 *.sqlite
 postgres_data/
+typesense-data/
 
 # Test coverage
 .coverage
 htmlcov/
 .pytest_cache/
+
+# Local files and caches
+.playwright-mcp/
+Livres/
 
 # Keep Claude Code configuration
 !.claude/
