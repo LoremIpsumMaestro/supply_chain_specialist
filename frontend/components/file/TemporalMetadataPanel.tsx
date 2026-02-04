@@ -55,7 +55,7 @@ export function TemporalMetadataPanel({ fileId, onUpdate }: TemporalMetadataPane
         `/files/${fileId}/temporal-metadata`
       );
 
-      const meta = response.data.temporal_metadata;
+      const meta = response.temporal_metadata;
       setMetadata(meta);
 
       // Initialize selected columns with detected or user-configured columns
@@ -65,7 +65,7 @@ export function TemporalMetadataPanel({ fileId, onUpdate }: TemporalMetadataPane
       }
     } catch (err: any) {
       console.error("Error fetching temporal metadata:", err);
-      setError(err.response?.data?.detail || "Erreur lors du chargement des métadonnées temporelles");
+      setError(err.message || "Erreur lors du chargement des métadonnées temporelles");
     } finally {
       setLoading(false);
     }

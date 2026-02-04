@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { useMessageStore } from '@/store/messageStore'
 import { messageApi } from '@/lib/api'
 import { ensureAuthToken } from '@/lib/auth'
-import type { Message } from '@/types'
+import type { Message, CitationMetadata } from '@/types'
 
 interface MessageInputProps {
   conversationId: string
@@ -60,7 +60,7 @@ export default function MessageInput({ conversationId }: MessageInputProps) {
       await ensureAuthToken()
 
       let accumulatedContent = ''
-      let citations = []
+      let citations: CitationMetadata[] = []
 
       for await (const chunk of messageApi.sendMessageStream(
         conversationId,

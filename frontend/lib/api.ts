@@ -379,3 +379,51 @@ export const authApi = {
     return handleResponse<User>(response)
   },
 }
+
+/**
+ * Generic API client for custom endpoints
+ */
+export const api = {
+  async get<T>(endpoint: string): Promise<T> {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      headers: {
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+    })
+    return handleResponse<T>(response)
+  },
+
+  async post<T>(endpoint: string, data?: unknown): Promise<T> {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      body: data ? JSON.stringify(data) : undefined,
+    })
+    return handleResponse<T>(response)
+  },
+
+  async patch<T>(endpoint: string, data?: unknown): Promise<T> {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+      body: data ? JSON.stringify(data) : undefined,
+    })
+    return handleResponse<T>(response)
+  },
+
+  async delete<T>(endpoint: string): Promise<T> {
+    const response = await fetch(`${API_URL}${endpoint}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${getAuthToken()}`,
+      },
+    })
+    return handleResponse<T>(response)
+  },
+}

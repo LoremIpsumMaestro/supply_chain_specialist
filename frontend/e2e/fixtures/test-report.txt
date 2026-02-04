@@ -1,0 +1,23 @@
+Rapport d'Analyse Supply Chain - Janvier 2024
+
+Résumé Exécutif
+Ce rapport présente une analyse des stocks et des commandes pour le mois de janvier 2024.
+Plusieurs alertes ont été identifiées concernant les ruptures de stock et les retards de livraison.
+
+Points Clés:
+• Stock négatif détecté pour SKU002 (Widget B): -50 unités
+• 3 commandes en retard identifiées
+• Lead time moyen: 12 jours
+• Taux de service: 87%
+
+Recommandations:
+1. Augmenter le stock de sécurité pour les produits critiques
+2. Renégocier les délais avec le Fournisseur Delta
+3. Mettre en place un système d'alerte automatique
+
+Tableau des Stocks:
+SKU     Produit    Stock    Statut
+SKU001  Widget A   150      OK
+SKU002  Widget B   -50      RUPTURE
+SKU003  Gadget C   300      OK
+SKU004  Gadget D   80       ALERTE
