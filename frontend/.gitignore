@@ -1,1 +1,4 @@
 tsconfig.tsbuildinfo
+test-results/
+test_output.txt
+playwright-report/
