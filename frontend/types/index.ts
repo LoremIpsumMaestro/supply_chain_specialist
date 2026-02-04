@@ -17,18 +17,39 @@ export interface ConversationWithMessages extends Conversation {
 
 export type MessageRole = 'user' | 'assistant'
 
+// Citation types (defined early for use in MessageStreamChunk)
+export interface TemporalContext {
+  date?: string
+  vs_previous_month?: string
+  seasonal_pattern?: string
+  lead_time_days?: number
+}
+
+export interface CitationMetadata {
+  filename: string
+  sheet_name?: string
+  cell_ref?: string
+  page?: number
+  row?: number
+  column?: number
+  value?: string
+  temporal_context?: TemporalContext
+}
+
 export interface Message {
   id: string
   conversation_id: string
   role: MessageRole
   content: string
   created_at: string
+  citations?: CitationMetadata[]
 }
 
 export interface MessageStreamChunk {
   content: string
   is_final: boolean
   error?: string
+  citations?: CitationMetadata[]
 }
 
 export interface SendMessageRequest {
