@@ -294,6 +294,17 @@ class LLMService:
                 "plutôt que d'inventer une réponse."
             )
 
+        # Add markdown formatting guidelines
+        system_content += (
+            "\n\nFORMATAGE DES RÉPONSES:\n"
+            "- Utilise des tableaux markdown pour présenter des données structurées (format: | Colonne 1 | Colonne 2 |)\n"
+            "- Utilise des listes à puces (-) ou numérotées (1.) pour les énumérations\n"
+            "- Utilise des blocs de code avec ```language pour les exemples de code/SQL\n"
+            "- Utilise **gras** pour les points importants ou alertes critiques\n"
+            "- Utilise _italique_ pour les nuances ou remarques secondaires\n"
+            "- Utilise `code inline` pour les termes techniques, noms de variables, ou références de cellules\n"
+        )
+
         system_message = {
             "role": "system",
             "content": system_content,

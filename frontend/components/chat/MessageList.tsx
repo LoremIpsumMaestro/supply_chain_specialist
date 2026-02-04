@@ -4,6 +4,7 @@ import { useEffect, useRef } from 'react'
 import { useMessageStore } from '@/store/messageStore'
 import { useUIStore } from '@/store/uiStore'
 import Message from './Message'
+import MessageContent from './MessageContent'
 import LoadingIndicator from './LoadingIndicator'
 
 interface MessageListProps {
@@ -89,10 +90,8 @@ export default function MessageList({ conversationId }: MessageListProps) {
           {isStreaming && (
             <div className="flex justify-start">
               <div className="max-w-[80%] rounded-lg bg-muted p-4">
-                <div className="whitespace-pre-wrap break-words text-sm">
-                  {streamingContent}
-                  <LoadingIndicator />
-                </div>
+                <MessageContent content={streamingContent} isUser={false} />
+                <LoadingIndicator />
               </div>
             </div>
           )}

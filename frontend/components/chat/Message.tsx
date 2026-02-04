@@ -4,6 +4,7 @@ import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { User, Bot } from 'lucide-react'
 import type { Message as MessageType } from '@/types'
+import MessageContent from './MessageContent'
 
 interface MessageProps {
   message: MessageType
@@ -45,9 +46,7 @@ export default function Message({ message }: MessageProps) {
               }
             `}
           >
-            <div className="whitespace-pre-wrap break-words text-sm">
-              {message.content}
-            </div>
+            <MessageContent content={message.content} isUser={isUser} />
           </div>
 
           {/* Timestamp */}
