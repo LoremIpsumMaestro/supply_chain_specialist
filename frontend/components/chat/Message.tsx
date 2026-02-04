@@ -4,7 +4,6 @@ import { formatDistanceToNow } from 'date-fns'
 import { fr } from 'date-fns/locale'
 import { User, Bot } from 'lucide-react'
 import type { Message as MessageType } from '@/types'
-import Citation from './Citation'
 
 interface MessageProps {
   message: MessageType
@@ -49,15 +48,6 @@ export default function Message({ message }: MessageProps) {
             <div className="whitespace-pre-wrap break-words text-sm">
               {message.content}
             </div>
-
-            {/* Citations */}
-            {message.citations && message.citations.length > 0 && (
-              <div className="mt-3 space-y-1">
-                {message.citations.map((citation, index) => (
-                  <Citation key={index} citation={citation} />
-                ))}
-              </div>
-            )}
           </div>
 
           {/* Timestamp */}

@@ -92,7 +92,6 @@ async def send_message(
     async def generate_stream() -> AsyncGenerator[str, None]:
         """Generate SSE stream for the response."""
         accumulated_content = ""
-        citations = []
 
         try:
             async for chunk in llm_service.stream_response(
@@ -103,17 +102,11 @@ async def send_message(
             ):
                 accumulated_content += chunk.content
 
-                if chunk.citations:
-                    citations = chunk.citations
-
                 # Format as SSE
                 event_data = {
                     "content": chunk.content,
                     "is_final": chunk.is_final,
                 }
-
-                if chunk.citations:
-                    event_data["citations"] = [c.dict() for c in chunk.citations]
 
                 yield f"data: {json.dumps(event_data)}\n\n"
 
@@ -123,7 +116,6 @@ async def send_message(
                         conversation_id=conversation_id,
                         role=MessageRole.ASSISTANT.value,
                         content=accumulated_content,
-                        citations=[c.dict() for c in citations] if citations else None,
                     )
                     db.add(assistant_message)
                     db.commit()

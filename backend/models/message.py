@@ -37,7 +37,6 @@ class MessageDB(Base):
     )
     role = Column(String(20), nullable=False)
     content = Column(Text, nullable=False)
-    citations = Column(JSON, nullable=True)
     created_at = Column(DateTime(timezone=True), nullable=False, default=datetime.utcnow, index=True)
 
     # Relationships
@@ -46,24 +45,11 @@ class MessageDB(Base):
 
 # Pydantic Models for API
 
-class CitationMetadata(BaseModel):
-    """Schema for citation metadata."""
-
-    filename: str
-    sheet_name: Optional[str] = None  # For Excel files
-    cell_ref: Optional[str] = None  # For Excel files (e.g., "C12")
-    page: Optional[int] = None  # For PDF/Word/PowerPoint
-    row: Optional[int] = None  # For Excel files
-    column: Optional[int] = None  # For Excel files
-    value: Optional[str] = None  # The actual value from the source
-
-
 class MessageBase(BaseModel):
     """Base schema for message."""
 
     role: MessageRole
     content: str = Field(..., min_length=1, max_length=50000)
-    citations: Optional[List[CitationMetadata]] = None
 
     @field_validator("content")
     @classmethod
@@ -96,4 +82,3 @@ class MessageStreamChunk(BaseModel):
 
     content: str
     is_final: bool = False
-    citations: Optional[List[CitationMetadata]] = None

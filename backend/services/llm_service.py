@@ -14,7 +14,7 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from backend.models.message import MessageDB, MessageStreamChunk, CitationMetadata
+from backend.models.message import MessageDB, MessageStreamChunk
 from backend.models.file import FileDB
 from backend.services.rag_service import rag_service
 from backend.services.knowledge_service import knowledge_service
@@ -157,23 +157,10 @@ class LLMService:
                 yield chunk
             logger.info(f"⏱️ Streaming took: {time.time() - start_stream:.3f}s")
 
-            # Send final chunk with citations from both sources
-            all_citations = []
-
-            # Add citations from knowledge base
-            if knowledge_results:
-                kb_citations = self._extract_knowledge_citations(knowledge_results)
-                all_citations.extend(kb_citations)
-
-            # Add citations from user documents
-            if search_results:
-                doc_citations = self._extract_citations(search_results)
-                all_citations.extend(doc_citations)
-
+            # Send final chunk
             yield MessageStreamChunk(
                 content="",
                 is_final=True,
-                citations=all_citations if all_citations else None,
             )
 
         except Exception as e:
@@ -319,71 +306,6 @@ class LLMService:
             messages.append({"role": msg.role, "content": msg.content})
 
         return messages
-
-    def _extract_citations(self, search_results: List[dict]) -> List[CitationMetadata]:
-        """
-        Extract citation metadata from search results.
-
-        Args:
-            search_results: Results from RAG search
-
-        Returns:
-            List of CitationMetadata objects
-        """
-        if not search_results:
-            return []
-
-        citations = []
-
-        for result in search_results:
-            metadata = result['metadata']
-
-            citation = CitationMetadata(
-                source_type=metadata.get('file_type', ''),
-                filename=metadata.get('filename', 'unknown'),
-                page=metadata.get('page'),
-                sheet_name=metadata.get('sheet_name'),
-                cell_ref=metadata.get('cell_ref'),
-                slide_number=metadata.get('slide_number'),
-                row_number=metadata.get('row_number'),
-                excerpt=result['content'][:200],  # First 200 chars
-            )
-
-            citations.append(citation)
-
-        return citations
-
-    def _extract_knowledge_citations(self, knowledge_results: List[dict]) -> List[CitationMetadata]:
-        """
-        Extract citation metadata from knowledge base search results.
-
-        Args:
-            knowledge_results: Results from knowledge base search
-
-        Returns:
-            List of CitationMetadata objects
-        """
-        if not knowledge_results:
-            return []
-
-        citations = []
-
-        for result in knowledge_results:
-            # Knowledge base citations use "knowledge" as source type
-            citation = CitationMetadata(
-                source_type='knowledge',
-                filename=f"{result.get('category', 'General')} - {result.get('title', 'Untitled')}",
-                page=None,
-                sheet_name=None,
-                cell_ref=None,
-                slide_number=None,
-                row_number=None,
-                excerpt=result['content'][:200],  # First 200 chars
-            )
-
-            citations.append(citation)
-
-        return citations
 
 
 # Singleton instance

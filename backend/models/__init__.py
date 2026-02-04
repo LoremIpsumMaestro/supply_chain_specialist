@@ -8,7 +8,6 @@ from backend.models.conversation import (
     ConversationWithMessages,
 )
 from backend.models.message import (
-    CitationMetadata,
     Message,
     MessageCreate,
     MessageDB,
@@ -28,7 +27,6 @@ __all__ = [
     "ConversationDB",
     "ConversationUpdate",
     "ConversationWithMessages",
-    "CitationMetadata",
     "Message",
     "MessageCreate",
     "MessageDB",
